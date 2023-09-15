@@ -3,8 +3,7 @@ import math
 from settings import *
 
 
-pg.init()
-class Raycasting:
+class RayCasting:
     def __init__(self, game):
         self.game = game
         self.ray_casting_result = []
@@ -25,7 +24,7 @@ class Raycasting:
             else:
                 texture_height = TEXTURE_SIZE * HEIGHT / proj_height
                 wall_column = self.textures[texture].subsurface(
-                    offset * (TEXTURE_SIZE - SCALE), HALF_TEXTURE_SIZE - texture_height // 2, 
+                    offset * (TEXTURE_SIZE - SCALE), HALF_TEXTURE_SIZE - texture_height // 2,
                     SCALE, texture_height
                 )
                 wall_column = pg.transform.scale(wall_column, (SCALE, HEIGHT))
@@ -35,25 +34,21 @@ class Raycasting:
 
     def ray_cast(self):
         self.ray_casting_result = []
+        texture_vert, texture_hor = 1, 1
         ox, oy = self.game.player.pos
         x_map, y_map = self.game.player.map_pos
 
-        texture_vert, texture_hor = 1,1
-
-        #math for ray angle and distance
-        ray_angle = self.game.player.angle - HALF_FOV + .0001
+        ray_angle = self.game.player.angle - HALF_FOV + 0.0001
         for ray in range(NUM_RAYS):
-            
             sin_a = math.sin(ray_angle)
             cos_a = math.cos(ray_angle)
 
-            #horizontals
-
+            # horizontals
             y_hor, dy = (y_map + 1, 1) if sin_a > 0 else (y_map - 1e-6, -1)
 
             depth_hor = (y_hor - oy) / sin_a
             x_hor = ox + depth_hor * cos_a
-            
+
             delta_depth = dy / sin_a
             dx = delta_depth * cos_a
 
@@ -66,10 +61,12 @@ class Raycasting:
                 y_hor += dy
                 depth_hor += delta_depth
 
-            #verticle rays
+            # verticals
             x_vert, dx = (x_map + 1, 1) if cos_a > 0 else (x_map - 1e-6, -1)
+
             depth_vert = (x_vert - ox) / cos_a
             y_vert = oy + depth_vert * sin_a
+
             delta_depth = dx / cos_a
             dy = delta_depth * sin_a
 
@@ -82,33 +79,24 @@ class Raycasting:
                 y_vert += dy
                 depth_vert += delta_depth
 
-
-            #depth of rays
+            # depth, texture offset
             if depth_vert < depth_hor:
                 depth, texture = depth_vert, texture_vert
                 y_vert %= 1
                 offset = y_vert if cos_a > 0 else (1 - y_vert)
-
             else:
                 depth, texture = depth_hor, texture_hor
                 x_hor %= 1
                 offset = (1 - x_hor) if sin_a > 0 else x_hor
-                
-            #fix fishbowl effect
+
+            # remove fishbowl effect
             depth *= math.cos(self.game.player.angle - ray_angle)
 
-            # pg.draw.line(self.game.screen, 'yellow', (100 * ox, 100 * oy), (100 * ox + 100 * depth * cos_a, 100 * oy + 100 * depth * sin_a), 2)
+            # projection
+            proj_height = SCREEN_DIST / (depth + 0.0001)
 
-            # 3d projection Height
-            proj_height = SCREEN_DIST / (depth +.0001)
-
-
-            #draw walls
-            # placed this variable here because it will not import this single thing
-            SCALE = WIDTH // NUM_RAYS
-
+            # ray casting result
             self.ray_casting_result.append((depth, proj_height, texture, offset))
-
 
             ray_angle += DELTA_ANGLE
 
